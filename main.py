@@ -1,24 +1,48 @@
 #!/usr/bin/env python3
-# https://docs.opencv.org/4.7.0/db/d28/tutorial_cascade_classifier.html
-# https://www.cs.cmu.edu/~efros/courses/LBMV07/Papers/viola-cvpr-01.pdf
+import json
+import itertools
 import cv2 as cv
-import numpy as np
+from pathlib import Path
 
-ogimage = cv.imread('coyote.jpg')
-ogimage = ogimage[:710, :]
+input_file = "RowlandF.json"
+image_dir = "mvzip"
 
-kernel = np.ones((5,5), np.float32)
-kernel /= kernel.size
-image = cv.filter2D(ogimage, -1, kernel)
-cv.imshow('blurr_coyote', image)
+with open(input_file, "r") as f:
+    js = json.load(f)
 
-image = cv.cvtColor(ogimage, cv.COLOR_BGR2GRAY)
+bboxes = dict()
+# Looks like the below, where images withou an annotation are None
+# image_path (str): bbox[]
 
-ret, thresh = cv.threshold(image, 128, 255, 0)
-conts, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+for image in js["images"]:
+    image_id = image["id"]
 
-cont_image = cv.drawContours(np.zeros(ogimage.shape), conts, -1, (0,255,0))
-cv.imshow('coyote', cont_image)
+    for annotation in js["annotations"]:
+        if annotation["image_id"] == image_id:
+            bboxes[image["file_name"]] = annotation["bbox"]
+            break
 
-while cv.waitKey(0) != ord('q'):
+i = iter(bboxes.items())
+
+for i, (key, bbox) in enumerate(itertools.islice(bboxes.items(), 3, 33, 3)):
+    p = Path(image_dir) / input_file.split(".")[0] / key
+
+    bbox = [int(b)//2 for b in bbox]
+    image = cv.imread(str(p))
+    image = cv.resize(image, (image.shape[1]//2, image.shape[0]//2))
+    print(bbox)
+
+    image = cv.rectangle(
+        image,
+        (bbox[0], bbox[1]),
+        (bbox[0] + bbox[2], bbox[1] + bbox[3]),
+        (0, 0, 255),
+        3,
+    )
+
+    cv.imshow(f"coyote{i}", image)
+
+    print(p)
+
+while cv.waitKey(0) != ord("q"):
     pass
