@@ -6,6 +6,7 @@ from pathlib import Path
 
 input_file = "RowlandF.json"
 image_dir = "mvzip"
+is_half = True
 
 with open(input_file, "r") as f:
     js = json.load(f)
@@ -22,15 +23,15 @@ for image in js["images"]:
             bboxes[image["file_name"]] = annotation["bbox"]
             break
 
-i = iter(bboxes.items())
-
 for i, (key, bbox) in enumerate(itertools.islice(bboxes.items(), 3, 33, 3)):
     p = Path(image_dir) / input_file.split(".")[0] / key
-
-    bbox = [int(b)//2 for b in bbox]
     image = cv.imread(str(p))
-    image = cv.resize(image, (image.shape[1]//2, image.shape[0]//2))
-    print(bbox)
+
+    if is_half:
+        bbox = [int(b)//2 for b in bbox]
+        image = cv.resize(image, (image.shape[1]//2, image.shape[0]//2))
+    else:
+        bbox = [int(b) for b in bbox]
 
     image = cv.rectangle(
         image,
@@ -41,8 +42,6 @@ for i, (key, bbox) in enumerate(itertools.islice(bboxes.items(), 3, 33, 3)):
     )
 
     cv.imshow(f"coyote{i}", image)
-
-    print(p)
 
 while cv.waitKey(0) != ord("q"):
     pass
